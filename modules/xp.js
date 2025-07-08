@@ -1,4 +1,4 @@
-const { SlashCommandBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const User = require('../database/models/User');
 const GuildUser = require('../database/models/GuildUser');
 
@@ -47,7 +47,7 @@ function init(client) {
     const now = Date.now();
 
     // Cooldown: 60 seconds per user per guild
-    if (cooldown.has(key) && now - cooldown.get(key) < 60000) return;
+    if (cooldown.has(key) && now - cooldown.get(key) < 15000) return;
     cooldown.set(key, now);
 
     // Get or create global User
@@ -108,17 +108,28 @@ function init(client) {
       const guildLevel = levelForXP(guildUser.experience);
       const guildNextXP = xpForLevel(guildLevel);
 
-      return interaction.reply({
-        content:
-          `**XP Stats for <@${targetUser.id}>**\n\n` +
-          `🌐 **Global:** ${user.global_experience} XP\n` +
-          `Level ${globalLevel} (${user.global_experience}/${globalNextXP})\n` +
-          formatXPBar(user.global_experience, globalNextXP) + '\n\n' +
-          `🏠 **This Server:** ${guildUser.experience} XP\n` +
-          `Level ${guildLevel} (${guildUser.experience}/${guildNextXP})\n` +
-          formatXPBar(guildUser.experience, guildNextXP),
-        flags: 1 << 6
-      });
+      const embed = new EmbedBuilder()
+        .setTitle(`${targetUser.tag}'s XP Stats`)
+        .addFields(
+            {
+            name: '🌐 Global',
+            value:
+                `XP: **${user.global_experience}**\n` +
+                `Level: **${globalLevel}** (${user.global_experience}/${globalNextXP})\n` +
+                formatXPBar(user.global_experience, globalNextXP),
+            inline: false
+            },
+            {
+            name: '🏠 This Server',
+            value:
+                `XP: **${guildUser.experience}**\n` +
+                `Level: **${guildLevel}** (${guildUser.experience}/${guildNextXP})\n` +
+                formatXPBar(guildUser.experience, guildNextXP),
+            inline: false
+            }
+        )
+        .setColor('#3498db');
+        return interaction.reply({ embeds: [embed] });
     }
     // --- Slash Command: /leaderboard ---
     if (interaction.commandName === 'leaderboard') {
@@ -139,10 +150,12 @@ function init(client) {
         return `**${i + 1}.** ${displayName} — ${gu.experience} XP (Lvl ${levelForXP(gu.experience)})`;
       }));
 
-      return interaction.reply({
-        content: `🏆 **Server XP Leaderboard**\n\n${leaderboard.join('\n')}`,
-        flags: 1 << 6
-      });
+      const serverName = interaction.guild?.name || "Server";
+        const embed = new EmbedBuilder()
+        .setTitle(`${serverName} Leaderboard 🏆`)
+        .setDescription(leaderboard.join('\n'))
+        .setColor('#e67e22');
+        return interaction.reply({ embeds: [embed] });
     }
   });
 }
