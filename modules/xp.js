@@ -45,9 +45,9 @@ function init(client) {
     const guildId = message.guild.id;
     const key = `${guildId}-${discordUserId}`;
     const now = Date.now();
+    const XP_DROP_DELAY = 5000;
 
-    // Cooldown: 60 seconds per user per guild
-    if (cooldown.has(key) && now - cooldown.get(key) < 15000) return;
+    if (cooldown.has(key) && now - cooldown.get(key) < XP_DROP_DELAY) return;
     cooldown.set(key, now);
 
     // Get or create global User
@@ -109,7 +109,7 @@ function init(client) {
       const guildNextXP = xpForLevel(guildLevel);
 
       const embed = new EmbedBuilder()
-        .setTitle(`${targetUser.tag}'s XP Stats`)
+        .setTitle(`${targetUser.username.replace(/\b\w/g, c => c.toUpperCase())}'s XP Stats`)
         .addFields(
             {
             name: '🌐 Global',
