@@ -1,7 +1,7 @@
 // /database/models/RPGCharacter.js
 const { DataTypes } = require('sequelize');
-const sequelize = require('../../utils/sequelize');
-const User = require('./User');
+const sequelize = require('../../../utils/sequelize');
+const User = require('../User');
 
 const RPGCharacter = sequelize.define('RPGCharacter', {
   id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
@@ -9,7 +9,7 @@ const RPGCharacter = sequelize.define('RPGCharacter', {
   user_id: {
     type: DataTypes.INTEGER,
     allowNull: false,
-    unique: true, // one RPG character per user for now
+    unique: true,
     references: {
       model: User,
       key: 'id'

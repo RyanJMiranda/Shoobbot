@@ -96,11 +96,11 @@ function init(client) {
       const targetUser = interaction.options.getUser('user') || interaction.user;
       let user = await User.findOne({ where: { discord_user_id: targetUser.id } });
       if (!user) {
-        return interaction.reply({ content: `No XP found for ${targetUser.tag}.`, ephemeral: true });
+        user = await User.create({ discord_user_id: targetUser.id });
       }
       let guildUser = await GuildUser.findOne({ where: { user_id: user.id, guild_id: interaction.guildId } });
       if (!guildUser) {
-        return interaction.reply({ content: `No XP found for ${targetUser.tag} in this server.`, ephemeral: true });
+        guildUser = await GuildUser.create({ user_id: user.id, guild_id: interaction.guildId });
       }
 
       const globalLevel = levelForXP(user.global_experience);

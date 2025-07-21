@@ -34,6 +34,16 @@ async function safeRestPut(rest, route, body, maxRetries = 3) {
     }
 }
 
+async function getCommandsFromModule(mod) {
+  if (typeof mod.buildCommands === 'function') {
+    const cmds = await mod.buildCommands();
+    return Array.isArray(cmds) ? cmds : [];
+  }
+  if (Array.isArray(mod.commands)) {
+    return mod.commands;
+  }
+  return [];
+}
 
 client.once(Events.ClientReady, async (client) => {
     console.log(`Logged in as ${client.user.tag} and ready to go`);
@@ -43,13 +53,23 @@ client.once(Events.ClientReady, async (client) => {
     const modules = [];
     let allCommands = [];
 
-    fs.readdirSync(modulesPath).forEach(file => {
-        const mod = require(`./modules/${file}`);
-        modules.push({ mod, file });
-        if (Array.isArray(mod.commands)) {
-            allCommands = allCommands.concat(mod.commands);
-        }
+    const files = fs.readdirSync(modulesPath).filter(file => {
+        const filePath = path.join(modulesPath, file);
+        return fs.statSync(filePath).isFile() && file.endsWith('.js');
     });
+
+    // Load all modules first
+    for (const file of files) {
+        const filePath = path.join(modulesPath, file);
+        const mod = require(filePath);
+        modules.push({ mod, file });
+    }
+
+    // Now, get all commands (supports async)
+    for (const { mod } of modules) {
+        const cmds = await getCommandsFromModule(mod);
+        allCommands = allCommands.concat(cmds);
+    }
 
     // --- STEP 2: Remove all guild commands and register new ones ---
     const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
@@ -57,6 +77,7 @@ client.once(Events.ClientReady, async (client) => {
     for (const [guildId] of client.guilds.cache) {
         // Remove old commands
         try {
+            console.log(`Preparing to clear old commands for guild ${guildId}`)
             await safeRestPut(
                 rest,
                 Routes.applicationGuildCommands(client.user.id, guildId),
@@ -70,6 +91,7 @@ client.once(Events.ClientReady, async (client) => {
         // Time registration
         const start = Date.now();
         try {
+            console.log(`Preparing to instantiate new commands for guild ${guildId}`)
             await safeRestPut(
                 rest, Routes.applicationGuildCommands(client.user.id, guildId),
                 { body: allCommands }
